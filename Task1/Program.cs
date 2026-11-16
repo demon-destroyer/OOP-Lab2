@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 abstract class DeliveryVehicle
@@ -27,9 +28,6 @@ class CourierDrone : DeliveryVehicle
     public override double CalculateCost(double distanceKm) => distanceKm * 5.0 + LoadKg * 20.0;
     public override string GetDescription() => $"[Дрон] {Model}, макс. вага: {LoadKg} кг";
     public override string GetStorageConditions() => "Зарядна станція в сухому приміщенні";
-
-    
-    public string LaunchDroneInspection() => "Запуск камер високої роздільної здатності та діагностика гвинтів виконана успішно.";
 }
 
 class CargoVan : DeliveryVehicle
@@ -50,8 +48,31 @@ class ElectricScooter : DeliveryVehicle
     public override string GetDescription() => $"[Електроскутер] {Model}, рюкзак: {LoadKg} кг";
 }
 
+
+class CargoShip : DeliveryVehicle
+{
+    public CargoShip(string model, double loadKg) : base(model, loadKg) { }
+
+    public override string EnvironmentType => "Водні шляхи";
+    public override double CalculateCost(double distanceKm) => distanceKm * 3.5 + LoadKg * 0.1;
+    public override string GetDescription() => $"[Судно] {Model}, дедвейт: {LoadKg} кг";
+    public override string GetStorageConditions() => "Портовий причал";
+}
+
 class Program
 {
+    
+    static double CalculateTotalFleetCost(IEnumerable<DeliveryVehicle> vehicles, double distanceKm)
+    {
+        double totalCost = 0;
+        foreach (var vehicle in vehicles)
+        {
+            
+            totalCost += vehicle.CalculateCost(distanceKm);
+        }
+        return totalCost;
+    }
+
     static void Main()
     {
         Console.OutputEncoding = Encoding.UTF8;
@@ -62,32 +83,20 @@ class Program
             new CargoVan("Renault Master", 1200),
             new CourierDrone("DJI FlyCart 30", 15),
             new ElectricScooter("Xiaomi Pro 2", 8),
-            new CourierDrone("Autel Titan", 20)
+            new CargoShip("Dnipro-1", 25000) // Новий об'єкт нового класу
         };
 
-        Console.WriteLine("--- Обхід колекції з використанням is та as ---\n");
+        double routeKm = 40.0;
 
-        foreach (DeliveryVehicle vehicle in fleet)
+        Console.WriteLine($"--- 1. Поліморфна узагальнена процедура (Пункт 1 & 3) ---");
+        double totalCost = CalculateTotalFleetCost(fleet, routeKm);
+        Console.WriteLine($"Загальна вартість доставки всього парку на {routeKm} км: {totalCost} грн\n");
+        
+        Console.WriteLine($"--- 2. Фільтрація за фактичним типом (Пункт 2) ---");
+        var drones = fleet.OfType<CourierDrone>();
+        foreach (var drone in drones)
         {
-            Console.WriteLine($"Об'єкт: {vehicle.GetDescription()}");
-
-            
-            if (vehicle is CourierDrone drone)
-            {
-                
-                Console.WriteLine($"  -> [is вибірка] Знайдено дрон! Виконуємо специфічну операцію:");
-                Console.WriteLine($"     {drone.LaunchDroneInspection()}");
-            }
-
-            
-            CargoVan van = vehicle as CargoVan;
-            if (van != null)
-            {
-                
-                Console.WriteLine($"  -> [as вибірка] Знайдено вантажний фургон. Потребує ліцензії категорії B.");
-            }
-
-            Console.WriteLine(new string('-', 50));
+            Console.WriteLine($"Відібрано через OfType: {drone.GetDescription()} (Умови: {drone.GetStorageConditions()})");
         }
     }
 }
